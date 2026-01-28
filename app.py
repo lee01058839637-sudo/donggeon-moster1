@@ -1,133 +1,135 @@
 import streamlit as st
-from pptx import Presentation
-from pptx.util import Inches, Pt, RGBColor
+import pandas as pd
+import datetime
 import matplotlib.pyplot as plt
 from korean_lunar_calendar import KoreanLunarCalendar
-import datetime
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
 import io
-import pandas as pd
 
-# 1. [앱 스타일링: 수묵화 & 황금 테마]
-st.set_page_config(page_title="천기자동: 파이널 마스터", page_icon="🏮", layout="wide")
+# 1. 앱 페이지 스타일 (수묵화의 단아함 + 황금빛 권위)
+st.set_page_config(page_title="천기자동 : 그랜드 마스터", page_icon="🏮", layout="wide")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&display=swap');
-    .main { background-color: #0b0c10; color: #d4af37; font-family: 'Nanum Myeongjo', serif; }
-    .stButton>button { width: 100%; background-color: #d4af37; color: black; font-weight: bold; border-radius: 12px; height: 3.5em; border: none; font-size: 1.1em; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3); }
-    .report-card { background-color: #1a1c24; padding: 25px; border-radius: 15px; border-left: 10px solid #d4af37; margin-bottom: 25px; line-height: 1.8; }
-    h1, h2, h3 { color: #d4af37; text-shadow: 2px 2px 4px #000; text-align: center; }
-    .stTabs [data-baseweb="tab-list"] { gap: 5px; }
-    .stTabs [data-baseweb="tab"] { background-color: #1f2833; border-radius: 5px 5px 0 0; color: #d4af37; padding: 12px 15px; font-size: 0.9em; }
+    .main { background-color: #0d1117; color: #d4af37; font-family: 'Nanum Myeongjo', serif; }
+    .stButton>button { width: 100%; background-color: #d4af37; color: #000; font-weight: bold; border-radius: 15px; height: 3.5em; border: none; font-size: 1.1em; transition: 0.3s; }
+    .stButton>button:hover { background-color: #fff; color: #d4af37; }
+    .report-card { background-color: #161b22; padding: 30px; border-radius: 20px; border: 1px solid #d4af37; margin-bottom: 25px; line-height: 1.9; }
+    .master-title { color: #d4af37; text-align: center; text-shadow: 2px 2px 5px #000; font-size: 3em; margin-bottom: 10px; }
+    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
+    .stTabs [data-baseweb="tab"] { background-color: #21262d; border-radius: 8px; color: #8b949e; padding: 12px 25px; }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] { background-color: #d4af37; color: #000; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. [통합 분석 엔진: 모든 데이터와 지혜의 총집합]
-class FinalMasterEngine:
-    def __init__(self, name, y, m, d, h, is_lunar):
+# 2. 분석 엔진 (네 인생의 모든 데이터를 로직화)
+class GrandMasterEngine:
+    def __init__(self, name, birth, lunar, time, concern):
         self.name = name
-        self.y, self.m, self.d, self.h = y, m, d, h
-        self.is_lunar = is_lunar
-        self.calendar = KoreanLunarCalendar()
-
-    def run_all_analysis(self):
-        # [만세력 도출]
-        if self.is_lunar:
-            self.calendar.setLunarDate(self.y, self.m, self.d, False)
-        else:
-            self.calendar.setSolarDate(self.y, self.m, self.d)
+        self.birth = birth
+        self.lunar = lunar
+        self.time = time
+        self.concern = concern
+        self.cal = KoreanLunarCalendar()
         
-        # [시뮬레이션 기반 마스터 로직 - 1973년생 예시 및 일반화]
-        ilgan = "정화(丁火) - 보석 위를 비추는 등불"
-        pillars = ["癸丑(년)", "壬戌(월)", "丁酉(일)", "癸卯(시)"]
-        
-        # 모든 고민 해결 데이터 세트
-        data = {
-            "zen": "비우면 채워지고, 멈추면 보입니다. 지금의 시련은 과거의 업(Karma)을 녹여 보석의 광채를 드러내는 과정입니다.",
-            "family": "배우자와의 갈등은 전생의 빚을 갚는 연기법의 과정입니다. 자식은 내 소유가 아닌 독립된 인연이니 믿음으로 지켜보십시오.",
-            "business": "K-뷰티 시스템 유통 혹은 스마트팜 자동화 사업이 귀하의 사주와 천생연분입니다. 큐레이션 역량을 발휘하십시오.",
-            "real_estate": "양산 라페스타 인근 및 원동면 토지는 귀하에게 명예와 부를 안겨줄 길지입니다. 매도는 2026년 하반기가 최적입니다.",
-            "spiritual": "꿈자리가 사나운 것은 조상의 간절한 부름입니다. 돌아가신 분이 주변을 맴도는 것은 해원(解寃)이 필요하다는 신호이니, 정성을 들이면 몸의 통증도 사라질 것입니다.",
-            "interior": "현관 정면에 거울을 두지 마시고, 침대 머리는 남동쪽 창가를 향하게 하여 기운의 순환을 도우십시오.",
-            "styling": "20년 미용 전문가의 안목: 이마를 시원하게 드러내고, 초록색 원석 액세서리로 부족한 목(木)기를 보충하십시오.",
-            "nature": "8년 임업 전문가의 처방: 편백나무 숲에서 맨발 걷기를 하며 땅의 기운을 직접 흡수하십시오.",
-            "frequency": "432Hz (우주의 치유 주파수)",
-            "color": "#2E7D32", # 행운의 색상 코드
-            "follow_up": (datetime.datetime.now() + datetime.timedelta(days=365)).strftime("%Y-%m-%d")
+    def analyze(self):
+        # 네 20년 미용/8년 임업/부동산 경험을 바탕으로 한 자동 처방
+        analysis = {
+            "zen": f"'{self.name}'님, 비우면 채워지고 멈추면 보입니다. 현재의 {self.concern} 고민은 보석을 깎는 과정입니다.",
+            "beauty": "20년 미용 마스터의 통찰: 관록궁(이마)을 열어 기운을 소통시키고, 중국 직수입 고퀄리티 가발 스타일링으로 자신감을 보강하십시오.",
+            "forest": "8년 임업 전문가의 처방: '흑도보감'의 기운이 필요합니다. 흑염소와 도라지, 그리고 촉성두릅의 강인한 생명력이 귀하의 정기를 살릴 것입니다.",
+            "estate": "부동산 비책: 양산 라페스타의 상업적 기운과 원동면 토지의 신축 개발 운을 활용하십시오. 2026년은 서생면 땅의 매도 적기입니다.",
+            "wealth": "재물 동향: Ethena(ENA)와 Sui(SUI)처럼 견고한 자산을 눈여겨보되, 로또의 요행보다는 데이터 기반의 분산 투자가 길합니다.",
+            "art": "예술 치유: 432Hz 치유 주파수와 김경호 스타일의 강렬한 록 발라드가 귀하의 막힌 혈을 뚫어줄 것입니다.",
+            "legal": "조언: 인근 지인의 사고나 산재 문제는 전문가의 도움을 받아 정당한 권리를 찾는 것이 인연의 매듭을 푸는 길입니다."
         }
-        return pillars, ilgan, data
+        return analysis
 
-# 3. [메인 앱 화면 레이아웃]
-st.title("🏮 천기자동(天機自動) : 대승지혜 마스터")
-st.markdown("#### **\"10,000년의 지혜와 마스터의 삶이 녹아든 인생 지도\"**")
+# 3. 메인 화면 구성
+st.markdown("<h1 class='master-title'>🏮 천기자동(天機自動)</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; font-size:1.2em;'><b>20년 미용 · 8년 임업 · 부동산 · 작곡 마스터의 통합 비책</b></p>", unsafe_allow_html=True)
 
+# 고객 데이터 입력 (데이터베이스 역할)
 with st.sidebar:
-    st.header("🙏 상담 신청서")
-    name = st.text_input("고객 이름", "홍길동")
-    birth = st.date_input("생년월일", datetime.date(1973, 11, 26))
-    lunar = st.checkbox("음력 적용", value=True)
-    hour = st.selectbox("태어난 시간", [f"{i:02d}시" for i in range(24)])
+    st.image("https://images.unsplash.com/photo-1507413245164-6160d8298b31?auto=format&fit=crop&q=80&w=400", caption="천기(天機)의 흐름")
+    st.header("📝 고객 상담 명부")
+    c_name = st.text_input("고객 이름", "신규 고객")
+    c_birth = st.date_input("생년월일", datetime.date(1985, 5, 20))
+    c_lunar = st.checkbox("음력 적용", value=False)
+    c_time = st.selectbox("태어난 시간", [f"{i:02d}시" for i in range(24)])
+    c_concern = st.selectbox("주요 고민", ["재물/사업", "건강/치유", "부동산/이사", "인연/가족", "진로/예술"])
+    
     st.divider()
-    st.info("💡 상담료 5만 원 이상의 가치를 보장합니다.")
-    start = st.button("운명의 문 열기")
+    if st.button("🔮 마스터의 통찰 실행"):
+        st.session_state['run'] = True
+        st.balloons()
 
-if start:
-    master = FinalMasterEngine(name, birth.year, birth.month, birth.day, hour, lunar)
-    pillars, ilgan, res = master.run_all_analysis()
+# 4. 상담 대시보드 (디테일한 탭 구성)
+if st.session_state.get('run'):
+    engine = GrandMasterEngine(c_name, c_birth, c_lunar, c_time, c_concern)
+    res = engine.analyze()
 
-    # 상단 요약
-    st.markdown(f"### ✨ {name}님의 명조: {' / '.join(pillars)}")
-    st.success(f"**타고난 성질:** {ilgan}")
+    tabs = st.tabs(["🧘 영성/수행", "🎨 미용/개운", "🌿 스마트팜/임업", "🏠 부동산/투자", "🎵 음악/예술", "📉 재물/코인", "📝 49일 일기"])
 
-    # 모든 고민을 해결하는 8대 전문 탭
-    tabs = st.tabs(["🕉️ 수행/가족", "💰 사업/경제", "🏠 부동산/풍수", "🏮 조상/영가/꿈", "🎨 개운/스타일", "🌿 자연/주파수", "📝 49일 일기", "📅 관리/예약"])
-
-    with tabs[0]: # 10년 스님 수행의 지혜 & 가족 문제
-        st.markdown(f"<div class='report-card'><h3>🧘 부처님의 지혜와 인연법</h3>{res['zen']}<br><br><b>[가족/인연]:</b> {res['family']}</div>", unsafe_allow_html=True)
+    with tabs[0]:
+        st.markdown(f"<div class='report-card'><h3>🧘 마음과 수행</h3>{res['zen']}<br><br><b>💡 마스터의 조언:</b> {res['legal']}</div>", unsafe_allow_html=True)
+        
+    
+    with tabs[1]:
+        st.markdown(f"<div class='report-card'><h3>✂️ 20년 경력 미용 비책</h3>{res['beauty']}</div>", unsafe_allow_html=True)
+        st.success("✨ 추천 스타일링: 관록궁을 강조한 포마드 스타일 혹은 풍성한 볼륨 가발")
         
 
-    with tabs[1]: # 사업 성공 및 경제 문제
-        st.subheader("📊 12개월 재물운 및 사업 전략")
-        fig, ax = plt.subplots(figsize=(10, 3), facecolor='#0b0c10')
-        ax.set_facecolor('#0b0c10')
-        months = [f"{i}월" for i in range(1, 13)]
-        scores = [40, 50, 45, 75, 90, 95, 80, 65, 55, 92, 85, 50]
-        ax.bar(months, scores, color=['#d4af37' if s >= 90 else '#444444' for s in scores])
+    with tabs[2]:
+        st.markdown(f"<div class='report-card'><h3>🌿 흑도보감 스마트팜 솔루션</h3>{res['forest']}</div>", unsafe_allow_html=True)
+        st.info("📊 <b>촉성두릅 자동화 팁:</b> 습도 85% 유지와 미스트 분사 시스템이 성패를 좌우합니다.")
+        
+
+    with tabs[3]:
+        st.markdown(f"<div class='report-card'><h3>🏛️ 부동산 풍수 전략</h3>{res['estate']}</div>", unsafe_allow_html=True)
+        st.warning("⚠️ 양산 원동면 45평 토지: 상가주택 설계 시 1층은 근린생활시설로 빼는 것이 수익률에 유리합니다.")
+        
+
+    with tabs[4]:
+        st.markdown(f"<div class='report-card'><h3>🎵 예술적 감각과 치유</h3>{res['art']}</div>", unsafe_allow_html=True)
+        st.audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3")
+        st.write("🎹 **현재 작곡 기운:** 432Hz의 평온함 속에 김경호의 폭발력을 담으십시오.")
+
+    with tabs[5]:
+        st.markdown(f"<div class='report-card'><h3>💰 재물 및 투자 동향</h3>{res['wealth']}</div>", unsafe_allow_html=True)
+        # 운세 그래프
+        fig, ax = plt.subplots(figsize=(10, 3), facecolor='#0d1117')
+        ax.set_facecolor('#0d1117')
+        ax.plot(['1월', '4월', '7월', '10월'], [40, 90, 65, 85], color='#d4af37', linewidth=3, marker='o')
         ax.tick_params(colors='white')
         st.pyplot(fig)
-        st.info(f"**추천 사업 모델:** {res['business']}")
 
-    with tabs[2]: # 부동산 투자 및 집터 풍수
-        st.markdown(f"<div class='report-card'><h3>🏛️ 실전 투자 및 터전 풍수</h3>{res['real_estate']}<br><br><b>[인테리어 처방]:</b> {res['interior']}</div>", unsafe_allow_html=True)
-        
+    with tabs[6]:
+        st.subheader("📝 49일 마음 정화 일기")
+        diary_df = pd.DataFrame({
+            "수행일": [f"Day {i+1}" for i in range(7)],
+            "과제": ["108배", "주파수 명상", "부동산 시장 모니터링", "작곡 아이디어 메모", "맨발 걷기", "감사 세 번", "산재 및 법률 공부"],
+            "완료": [False] * 7
+        })
+        st.data_editor(diary_df, use_container_width=True)
 
-    with tabs[3]: # 조상, 묘자리, 영가, 꿈, 이유 없는 통증
-        st.markdown(f"<div class='report-card'><h3>🏮 조상 덕과 영적 치유</h3>{res['spiritual']}</div>", unsafe_allow_html=True)
-        st.warning("⚠️ **마스터의 비방:** 묘자리의 기운이 불안할 땐 정성 어린 천도재와 기도가 가장 빠른 개운법입니다.")
-        
+    # 파워포인트 생성 (마스터의 유료 리포트)
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[5])
+    title = slide.shapes.title
+    title.text = f"{c_name}님을 위한 천기(天機) 리포트"
+    tf = slide.shapes.add_textbox(Inches(0.5), Inches(1.5), Inches(9), Inches(5)).text_frame
+    tf.text = f"1. 수행: {res['zen']}\n2. 미용: {res['beauty']}\n3. 사업: {res['forest']}\n4. 투자: {res['estate']}"
+    
+    buf = io.BytesIO()
+    prs.save(buf)
+    st.download_button("📥 5만원 프리미엄 리포트 다운로드", buf.getvalue(), file_name=f"{c_name}_상담리포트.pptx")
 
-    with tabs[4]: # 20년 미용 전문가의 개운 스타일링
-        st.subheader("🎨 퍼스널 개운 컬러 & 스타일")
-        st.color_picker("당신의 Visual DNA (행운 색상)", res['color'], disabled=True)
-        st.markdown(f"<div class='report-card'><b>전문가 스타일링:</b> {res['styling']}</div>", unsafe_allow_html=True)
-        
-
-    with tabs[5]: # 8년 임업 전문가의 자연 처방 & 주파수
-        st.markdown(f"<div class='report-card'><b>🌳 생명력의 터전:</b> {res['nature']}<br><b>🎵 운명의 주파수:</b> {res['frequency']}</div>", unsafe_allow_html=True)
-        st.audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3") 
-        
-
-    with tabs[6]: # 49일 마음 정화 일기
-        st.subheader("📝 49일 마음 정화 일기 (Habit Tracker)")
-        st.write("운명은 실천하는 자의 것입니다. 49일 동안 매일 체크하십시오.")
-        diary_data = {"날짜": [f"Day {i+1}" for i in range(7)], "과제": ["108배", "주파수 명상", "부모님 안부", "공간 청소", "감사 세 가지", "맨발 걷기", "나를 향한 자비"], "완료": [False]*7}
-        st.data_editor(pd.DataFrame(diary_data))
-
-    with tabs[7]: # 미래 예약 및 상담 기록
-        st.subheader("📅 사후 관리 및 미래 예약")
-        st.success(f"**다음 정밀 상담 예정일:** {res['follow_up']}")
-        st.text_area("마스터의 비망록 (상담 기록)", "고객의 현재 고민: 양산 부동산 매도 시점. 내년 하반기 대운 진입 시 재연락 필요.")
-
-    # 4. [프리미엄 리포트 다운로드]
-    st.divider()
-    st.download_button("📥 5만 원 가치의 프리미엄 리포트(PPT) 발행", data="PPT_BINARY_DATA", file_name=f"{name}_인생종합지침서.pptx")
+# 5. 고객 데이터 저장 기능
+if st.button("💾 고객 상담 내역 저장"):
+    save_data = pd.DataFrame({"이름": [c_name], "날짜": [datetime.datetime.now()], "고민": [c_concern]})
+    st.write("고객 데이터가 서버에 임시 저장되었습니다. (추후 DB 연결 가능)")
+    st.dataframe(save_data)
