@@ -1,135 +1,105 @@
 import streamlit as st
 import pandas as pd
 import datetime
-import matplotlib.pyplot as plt
-from korean_lunar_calendar import KoreanLunarCalendar
+import hashlib
 from pptx import Presentation
-from pptx.util import Inches, Pt
-from pptx.dml.color import RGBColor
+from pptx.util import Inches
 import io
 
-# 1. 앱 페이지 스타일 (수묵화의 단아함 + 황금빛 권위)
-st.set_page_config(page_title="법천스님 : 그랜드 마스터", page_icon="🏮", layout="wide")
+# 1. 앱 페이지 설정 (최고급 수묵화 테마)
+st.set_page_config(page_title="황산스님 AI 명리정종", page_icon="🏮", layout="wide")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&display=swap');
     .main { background-color: #0d1117; color: #d4af37; font-family: 'Nanum Myeongjo', serif; }
-    .stButton>button { width: 100%; background-color: #d4af37; color: #000; font-weight: bold; border-radius: 15px; height: 3.5em; border: none; font-size: 1.1em; transition: 0.3s; }
-    .stButton>button:hover { background-color: #fff; color: #d4af37; }
-    .report-card { background-color: #161b22; padding: 30px; border-radius: 20px; border: 1px solid #d4af37; margin-bottom: 25px; line-height: 1.9; }
-    .master-title { color: #d4af37; text-align: center; text-shadow: 2px 2px 5px #000; font-size: 3em; margin-bottom: 10px; }
-    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
-    .stTabs [data-baseweb="tab"] { background-color: #21262d; border-radius: 8px; color: #8b949e; padding: 12px 25px; }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] { background-color: #d4af37; color: #000; font-weight: bold; }
+    .stButton>button { width: 100%; background-color: #d4af37; color: #000; font-weight: bold; border-radius: 10px; height: 3.5em; border: 1px solid #fff; }
+    .report-card { background-color: #161b22; padding: 30px; border-radius: 20px; border-left: 5px solid #d4af37; margin-bottom: 25px; line-height: 2; color: #e0e0e0; }
+    .master-title { text-align: center; color: #d4af37; font-size: 3em; text-shadow: 2px 2px 4px #000; }
+    .life-stage-title { color: #d4af37; font-weight: bold; border-bottom: 1px solid #d4af37; padding-bottom: 5px; margin-bottom: 15px; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. 분석 엔진 (네 인생의 모든 데이터를 로직화)
-class GrandMasterEngine:
-    def __init__(self, name, birth, lunar, time, concern):
-        self.name = name
-        self.birth = birth
-        self.lunar = lunar
-        self.time = time
-        self.concern = concern
-        self.cal = KoreanLunarCalendar()
-        
-    def analyze(self):
-        # 네 법천스님/영적사주/고민상담
-        analysis = {
-            "zen": f"'{self.name}'님, 비우면 채워지고 멈추면 보입니다. 현재의 {self.concern} 고민은 보석을 깎는 과정입니다.",
-            "beauty": "20년 미용 마스터의 통찰: 관록궁(이마)을 열어 기운을 소통시키고, 중국 직수입 고퀄리티 가발 스타일링으로 자신감을 보강하십시오.",
-            "forest": "8년 임업 전문가의 처방: '흑도보감'의 기운이 필요합니다. 흑염소와 도라지, 그리고 촉성두릅의 강인한 생명력이 귀하의 정기를 살릴 것입니다.",
-            "estate": "부동산 비책: 양산 라페스타의 상업적 기운과 원동면 토지의 신축 개발 운을 활용하십시오. 2026년은 서생면 땅의 매도 적기입니다.",
-            "wealth": "재물 동향: Ethena(ENA)와 Sui(SUI)처럼 견고한 자산을 눈여겨보되, 로또의 요행보다는 데이터 기반의 분산 투자가 길합니다.",
-            "art": "예술 치유: 432Hz 치유 주파수와 김경호 스타일의 강렬한 록 발라드가 귀하의 막힌 혈을 뚫어줄 것입니다.",
-            "legal": "조언: 인근 지인의 사고나 산재 문제는 전문가의 도움을 받아 정당한 권리를 찾는 것이 인연의 매듭을 푸는 길입니다."
-        }
-        return analysis
+st.markdown("<h1 class='master-title'>🏮 황산스님 명리정종(命理正宗)</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'><b>우주의 기운과 사주팔자의 이치로 당신의 천명을 읽습니다.</b></p>", unsafe_allow_html=True)
 
-# 3. 메인 화면 구성
-st.markdown("<h1 class='master-title'>🏮 천기자동(天機自動)</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; font-size:1.2em;'><b>법천스님 · 영적사주 · 동양최초 아시아 명리학 · </b></p>", unsafe_allow_html=True)
+# 2. 사주 입력 정보
+with st.container():
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        c_name = st.text_input("👤 고객 성함", "방문객")
+    with col2:
+        c_birth = st.date_input("📅 생년월일", datetime.date(1985, 5, 20))
+    with col3:
+        c_time = st.selectbox("⏰ 태어난 시간", [f"{i:02d}시 (자~해시)" for i in range(24)])
 
-# 고객 데이터 입력 (데이터베이스 역할)
-with st.sidebar:
-    st.image("https://images.unsplash.com/photo-1507413245164-6160d8298b31?auto=format&fit=crop&q=80&w=400", caption="천기(天機)의 흐름")
-    st.header("📝 고객 상담 명부")
-    c_name = st.text_input("고객 이름", "신규 고객")
-    c_birth = st.date_input("생년월일", datetime.date(1985, 5, 20))
-    c_lunar = st.checkbox("음력 적용", value=False)
-    c_time = st.selectbox("태어난 시간", [f"{i:02d}시" for i in range(24)])
-    c_concern = st.selectbox("주요 고민", ["재물/사업", "건강/치유", "부동산/이사", "인연/가족", "진로/예술"])
+    c_lunar = st.radio("🌗 기운의 기준", ["음력(Lunar)", "양력(Solar)"], horizontal=True)
+
+# 3. 고도화된 사주 분석 엔진 (정교한 난수 생성)
+def get_detailed_analysis(name, birth, time_str):
+    # 이름, 날짜, 시간을 모두 섞어 고유한 해시값 생성 (수만 가지 조합 가능)
+    combined_key = f"{name}{birth.strftime('%Y%m%d')}{time_str}"
+    hash_val = int(hashlib.md5(combined_key.encode()).hexdigest(), 16)
     
-    st.divider()
-    if st.button("🔮 마스터의 통찰 실행"):
-        st.session_state['run'] = True
-        st.balloons()
-
-# 4. 상담 대시보드 (디테일한 탭 구성)
-if st.session_state.get('run'):
-    engine = GrandMasterEngine(c_name, c_birth, c_lunar, c_time, c_concern)
-    res = engine.analyze()
-
-    tabs = st.tabs(["🧘 영성/수행", "🎨 미용/개운", "🌿 스마트팜/임업", "🏠 부동산/투자", "🎵 음악/예술", "📉 재물/코인", "📝 49일 일기"])
-
-    with tabs[0]:
-        st.markdown(f"<div class='report-card'><h3>🧘 마음과 수행</h3>{res['zen']}<br><br><b>💡 마스터의 조언:</b> {res['legal']}</div>", unsafe_allow_html=True)
-        
+    # 만세력 기운 추출 (가상 로직이지만 결과가 매번 다르게 나옴)
+    element_idx = hash_val % 5
+    elements = ["목(木) - 청룡의 기운", "화(火) - 주작의 기운", "토(土) - 황룡의 기운", "금(金) - 백호의 기운", "수(水) - 현무의 기운"]
     
-    with tabs[1]:
-        st.markdown(f"<div class='report-card'><h3>✂️ 20년 경력 미용 비책</h3>{res['beauty']}</div>", unsafe_allow_html=True)
-        st.success("✨ 추천 스타일링: 관록궁을 강조한 포마드 스타일 혹은 풍성한 볼륨 가발")
+    # 초년, 중년, 말년 대운 데이터베이스 (조합형)
+    early_fortunes = [
+        "이른 시기에 문창성(文昌星)이 비추니 학문과 예술에 두각을 나타낼 상입니다. 부모의 덕이 두터워 평탄한 성장을 보입니다.",
+        "청년기에는 역마살이 있어 주거의 변동이 잦으나, 이는 훗날 큰 그릇이 되기 위한 담금질입니다. 스스로 길을 개척해야 합니다.",
+        "기운이 맑고 고우니 주변의 도움으로 일찍이 이름을 알립니다. 다만 욕심을 부리면 공든 탑이 무너질 수 있으니 자중함이 길합니다."
+    ]
+    mid_fortunes = [
+        "장년기에 접어들어 천권성(天權星)이 임하니 만인을 다스리는 권세를 얻거나, 큰 재물을 만지는 운세입니다. 사업의 기운이 왕성합니다.",
+        "중년에는 다소 풍파가 예상되나 인내하면 반드시 결실을 봅니다. 기술과 장인 정신이 당신을 지탱하는 힘이 될 것입니다.",
+        "비로소 만사가 형통하고 가정이 화목해지는 시기입니다. 동쪽에서 귀인이 나타나 큰 기회를 가져다줍니다."
+    ]
+    late_fortunes = [
+        "말년에는 천수성(天壽星)이 비추니 건강하고 안락한 삶이 보장됩니다. 자손들이 번창하여 가문의 영광을 높입니다.",
+        "산속의 정취를 즐기며 명예를 얻는 노후가 보입니다. 사회적 존경을 받으며 지혜를 나누는 스승의 삶을 살게 됩니다.",
+        "창고에 곡식이 가득 차고 인덕이 끊이지 않으니, 베푸는 삶을 통해 큰 덕을 쌓는 아름다운 황혼입니다."
+    ]
+
+    return {
+        "element": elements[element_idx],
+        "early": early_fortunes[hash_val % 3],
+        "mid": mid_fortunes[(hash_val // 3) % 3],
+        "late": late_fortunes[(hash_val // 9) % 3],
+        "advice": "황산스님의 한마디: '운명은 정해진 것이 아니라 흐르는 강물과 같으니, 삿대를 젓는 것은 당신의 몫입니다.'"
+    }
+
+# 4. 분석 실행
+if st.button("🔮 황산스님께 천명(天命) 여쭙기"):
+    st.balloons()
+    res = get_detailed_analysis(c_name, c_birth, c_time)
+    
+    st.markdown(f"### ✨ {c_name}님의 사주 원국 분석: **{res['element']}**")
+    
+    col_a, col_b, col_c = st.columns(3)
+    
+    with col_a:
+        st.markdown(f"<div class='report-card'><div class='life-stage-title'>🌱 초년운 (靑年運)</div>{res['early']}</div>", unsafe_allow_html=True)
+        
+        
+    with col_b:
+        st.markdown(f"<div class='report-card'><div class='life-stage-title'>☀️ 중년운 (壯年運)</div>{res['mid']}</div>", unsafe_allow_html=True)
+        
+        
+    with col_c:
+        st.markdown(f"<div class='report-card'><div class='life-stage-title'>🌕 말년운 (晩年運)</div>{res['late']}</div>", unsafe_allow_html=True)
         
 
-    with tabs[2]:
-        st.markdown(f"<div class='report-card'><h3>🌿 흑도보감 스마트팜 솔루션</h3>{res['forest']}</div>", unsafe_allow_html=True)
-        st.info("📊 <b>촉성두릅 자동화 팁:</b> 습도 85% 유지와 미스트 분사 시스템이 성패를 좌우합니다.")
-        
+    st.markdown(f"<div class='report-card' style='text-align:center; border-left:none; border-top:5px solid #d4af37;'><b>🙏 황산스님의 지혜:</b><br>{res['advice']}</div>", unsafe_allow_html=True)
 
-    with tabs[3]:
-        st.markdown(f"<div class='report-card'><h3>🏛️ 부동산 풍수 전략</h3>{res['estate']}</div>", unsafe_allow_html=True)
-        st.warning("⚠️ 양산 원동면 45평 토지: 상가주택 설계 시 1층은 근린생활시설로 빼는 것이 수익률에 유리합니다.")
-        
-
-    with tabs[4]:
-        st.markdown(f"<div class='report-card'><h3>🎵 예술적 감각과 치유</h3>{res['art']}</div>", unsafe_allow_html=True)
-        st.audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3")
-        st.write("🎹 **현재 작곡 기운:** 432Hz의 평온함 속에 김경호의 폭발력을 담으십시오.")
-
-    with tabs[5]:
-        st.markdown(f"<div class='report-card'><h3>💰 재물 및 투자 동향</h3>{res['wealth']}</div>", unsafe_allow_html=True)
-        # 운세 그래프
-        fig, ax = plt.subplots(figsize=(10, 3), facecolor='#0d1117')
-        ax.set_facecolor('#0d1117')
-        ax.plot(['1월', '4월', '7월', '10월'], [40, 90, 65, 85], color='#d4af37', linewidth=3, marker='o')
-        ax.tick_params(colors='white')
-        st.pyplot(fig)
-
-    with tabs[6]:
-        st.subheader("📝 49일 마음 정화 일기")
-        diary_df = pd.DataFrame({
-            "수행일": [f"Day {i+1}" for i in range(7)],
-            "과제": ["108배", "주파수 명상", "부동산 시장 모니터링", "작곡 아이디어 메모", "맨발 걷기", "감사 세 번", "산재 및 법률 공부"],
-            "완료": [False] * 7
-        })
-        st.data_editor(diary_df, use_container_width=True)
-
-    # 파워포인트 생성 (마스터의 유료 리포트)
+    # 파워포인트 생성 (내용 보강)
     prs = Presentation()
     slide = prs.slides.add_slide(prs.slide_layouts[5])
-    title = slide.shapes.title
-    title.text = f"{c_name}님을 위한 천기(天機) 리포트"
+    slide.shapes.title.text = f"{c_name}님의 평생 사주 리포트"
     tf = slide.shapes.add_textbox(Inches(0.5), Inches(1.5), Inches(9), Inches(5)).text_frame
-    tf.text = f"1. 수행: {res['zen']}\n2. 미용: {res['beauty']}\n3. 사업: {res['forest']}\n4. 투자: {res['estate']}"
+    tf.text = f"[사주기운] {res['element']}\n\n[초년] {res['early']}\n\n[중년] {res['mid']}\n\n[말년] {res['late']}"
     
     buf = io.BytesIO()
     prs.save(buf)
-    st.download_button("📥 5만원 프리미엄 리포트 다운로드", buf.getvalue(), file_name=f"{c_name}_상담리포트.pptx")
-
-# 5. 고객 데이터 저장 기능
-if st.button("💾 고객 상담 내역 저장"):
-    save_data = pd.DataFrame({"이름": [c_name], "날짜": [datetime.datetime.now()], "고민": [c_concern]})
-    st.write("고객 데이터가 서버에 임시 저장되었습니다. (추후 DB 연결 가능)")
-    st.dataframe(save_data)
+    st.download_button("📥 5만원 상당 프리미엄 평생 운세장 다운로드", buf.getvalue(), file_name=f"{c_name}_인생리포트.pptx")
