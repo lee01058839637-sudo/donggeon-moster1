@@ -9,7 +9,7 @@ from pptx.dml.color import RGBColor
 import io
 
 # 1. 앱 페이지 스타일 (수묵화의 단아함 + 황금빛 권위)
-st.set_page_config(page_title="천기자동 : 그랜드 마스터", page_icon="🏮", layout="wide")
+st.set_page_config(page_title="법천스님 : 그랜드 마스터", page_icon="🏮", layout="wide")
 
 st.markdown("""
     <style>
@@ -36,7 +36,7 @@ class GrandMasterEngine:
         self.cal = KoreanLunarCalendar()
         
     def analyze(self):
-        # 네 20년 미용/8년 임업/부동산 경험을 바탕으로 한 자동 처방
+        # 네 법천스님/영적사주/고민상담
         analysis = {
             "zen": f"'{self.name}'님, 비우면 채워지고 멈추면 보입니다. 현재의 {self.concern} 고민은 보석을 깎는 과정입니다.",
             "beauty": "20년 미용 마스터의 통찰: 관록궁(이마)을 열어 기운을 소통시키고, 중국 직수입 고퀄리티 가발 스타일링으로 자신감을 보강하십시오.",
@@ -50,7 +50,7 @@ class GrandMasterEngine:
 
 # 3. 메인 화면 구성
 st.markdown("<h1 class='master-title'>🏮 천기자동(天機自動)</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; font-size:1.2em;'><b>20년 미용 · 8년 임업 · 부동산 · 작곡 마스터의 통합 비책</b></p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; font-size:1.2em;'><b>법천스님 · 영적사주 · 동양최초 아시아 명리학 · </b></p>", unsafe_allow_html=True)
 
 # 고객 데이터 입력 (데이터베이스 역할)
 with st.sidebar:
